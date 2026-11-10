@@ -13,7 +13,6 @@ import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
 import java.io.IOException;
-import java.sql.SQLException;
 
 @WebServlet("/login")
 public class LoginServlet extends HttpServlet {
@@ -48,15 +47,17 @@ public class LoginServlet extends HttpServlet {
 
         try {
             Usuario usuario = dao.buscarPorEmail(email);
-            String hash = dao.buscarHashPorEmail(email);
 
-            if (usuario == null || !PasswordUtil.verificar(password, hash)) {
+            if (usuario == null || !PasswordUtil.verificar(password, usuario.getPasswordHash())) {
                 req.setAttribute("error",
                     "Correo electrónico o contraseña incorrectos.");
                 req.getRequestDispatcher("/WEB-INF/views/login.jsp")
                    .forward(req, resp);
                 return;
             }
+
+            // El hash nunca debe almacenarse en el objeto de usuario de la sesión.
+            usuario.setPasswordHash(null);
 
             HttpSession anterior = req.getSession(false);
             if (anterior != null) anterior.invalidate();
@@ -67,7 +68,7 @@ public class LoginServlet extends HttpServlet {
 
             resp.sendRedirect(req.getContextPath() + "/inicio");
 
-        } catch (SQLException e) {
+        } catch (RuntimeException e) {
             log("Error al iniciar sesión", e);
             req.setAttribute("error",
                 "No fue posible iniciar sesión. Intenta más tarde.");

@@ -1,103 +1,56 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
-
 package com.metaspersonales.dao;
 
-import com.metaspersonales.config.ConexionBD;
+import com.metaspersonales.config.HibernateUtil;
 import com.metaspersonales.model.Usuario;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityTransaction;
+import java.util.List;
 
-import java.sql.*;
-import java.time.LocalDate;
-
+/** Acceso a Usuario mediante JPA con Hibernate como proveedor ORM. */
 public class UsuarioDAO {
 
-    public boolean existeEmailOUsuario(String email, String username)
-            throws SQLException {
-
-        String sql = "SELECT 1 FROM Usuario " +
-                     "WHERE email = ? OR username = ? LIMIT 1";
-
-        try (Connection cn = ConexionBD.obtenerConexion();
-             PreparedStatement ps = cn.prepareStatement(sql)) {
-
-            ps.setString(1, email);
-            ps.setString(2, username);
-
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next();
-            }
+    public boolean existeEmailOUsuario(String email, String username) {
+        EntityManager em = HibernateUtil.getEntityManagerFactory().createEntityManager();
+        try {
+            Long cantidad = em.createQuery(
+                "SELECT COUNT(u) FROM Usuario u WHERE u.email = :email OR u.username = :username",
+                Long.class)
+                .setParameter("email", email)
+                .setParameter("username", username)
+                .getSingleResult();
+            return cantidad > 0;
+        } finally {
+            em.close();
         }
     }
 
-    public void registrar(Usuario usuario, String passwordHash)
-            throws SQLException {
-
-        String sql = "INSERT INTO Usuario " +
-            "(nombres, apellidos, username, email, bday, phone_number, password_hash) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?)";
-
-        try (Connection cn = ConexionBD.obtenerConexion();
-             PreparedStatement ps = cn.prepareStatement(sql)) {
-
-            ps.setString(1, usuario.getNombres());
-            ps.setString(2, usuario.getApellidos());
-            ps.setString(3, usuario.getUsername());
-            ps.setString(4, usuario.getEmail());
-
-            // Conversión de LocalDate a SQL DATE.
-            ps.setDate(5, Date.valueOf(usuario.getFechaNacimiento()));
-
-            ps.setString(6, usuario.getTelefono());
-            ps.setString(7, passwordHash);
-
-            ps.executeUpdate();
+    public void registrar(Usuario usuario, String passwordHash) {
+        EntityManager em = HibernateUtil.getEntityManagerFactory().createEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        try {
+            tx.begin();
+            usuario.setPasswordHash(passwordHash);
+            em.persist(usuario);
+            tx.commit();
+        } catch (RuntimeException e) {
+            if (tx.isActive()) tx.rollback();
+            throw e;
+        } finally {
+            em.close();
         }
     }
 
-    public Usuario buscarPorEmail(String email) throws SQLException {
-
-        String sql = "SELECT user_id, nombres, apellidos, username, " +
-            "email, bday, phone_number FROM Usuario WHERE email = ? LIMIT 1";
-
-        try (Connection cn = ConexionBD.obtenerConexion();
-             PreparedStatement ps = cn.prepareStatement(sql)) {
-
-            ps.setString(1, email);
-
-            try (ResultSet rs = ps.executeQuery()) {
-
-                if (!rs.next()) return null;
-
-                Date fecha = rs.getDate("bday");
-
-                return new Usuario(
-                    rs.getInt("user_id"),
-                    rs.getString("nombres"),
-                    rs.getString("apellidos"),
-                    rs.getString("username"),
-                    rs.getString("email"),
-                    fecha == null ? null : fecha.toLocalDate(),
-                    rs.getString("phone_number")
-                );
-            }
-        }
-    }
-
-    public String buscarHashPorEmail(String email) throws SQLException {
-
-        String sql = "SELECT password_hash FROM Usuario WHERE email = ? LIMIT 1";
-
-        try (Connection cn = ConexionBD.obtenerConexion();
-             PreparedStatement ps = cn.prepareStatement(sql)) {
-
-            ps.setString(1, email);
-
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? rs.getString("password_hash") : null;
-            }
+    public Usuario buscarPorEmail(String email) {
+        EntityManager em = HibernateUtil.getEntityManagerFactory().createEntityManager();
+        try {
+            List<Usuario> resultados = em.createQuery(
+                "SELECT u FROM Usuario u WHERE u.email = :email", Usuario.class)
+                .setParameter("email", email)
+                .setMaxResults(1)
+                .getResultList();
+            return resultados.isEmpty() ? null : resultados.get(0);
+        } finally {
+            em.close();
         }
     }
 }
-

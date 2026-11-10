@@ -13,7 +13,6 @@ import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
 import java.io.IOException;
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.regex.Pattern;
 
@@ -76,7 +75,7 @@ public class RegistroServlet extends HttpServlet {
             resp.sendRedirect(req.getContextPath() +
                               "/login?registro=exitoso");
 
-        } catch (SQLException e) {
+        } catch (RuntimeException e) {
             log("Error en el registro de usuario", e);
             req.setAttribute("error",
                 "No fue posible completar el registro. Intenta nuevamente.");
