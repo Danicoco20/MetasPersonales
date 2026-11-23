@@ -1,0 +1,35 @@
+# Maven
+target/
+build/
+dist/
+
+# NetBeans: archivos privados y temporales
+nbproject/private/
+nbbuild/
+nbdist/
+.nb-gradle/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Visual Studio Code
+.vscode/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs y archivos temporales
+*.log
+*.tmp
+
+# Variables de entorno y configuraciones locales
+.env
+.env.*
+!.env.example
+
+# Archivos de configuración local con credenciales
+application-local.properties
+db.properties
